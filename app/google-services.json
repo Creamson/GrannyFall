@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "340399110025",
+    "firebase_url": "https://fallengranny-2a6c6.firebaseio.com",
+    "project_id": "fallengranny-2a6c6",
+    "storage_bucket": "fallengranny-2a6c6.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:340399110025:android:8a662e6187feb7a9",
+        "android_client_info": {
+          "package_name": "pl.edu.agh.grannyfall"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "340399110025-d1b2o6j7njs1d56tfksdpv21e3ujo6dq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "pl.edu.agh.grannyfall",
+            "certificate_hash": "b7164d4950154c4fe40a11ee01f622e19d90754b"
+          }
+        },
+        {
+          "client_id": "340399110025-69j8n464v890aj7d16og669f9oti7nmt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtQkGu3e39xoggvp03N5E9BvPJiakEQhA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "340399110025-69j8n464v890aj7d16og669f9oti7nmt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">GrannyFall</string>
+    <string name="button_start_recording">Begin</string>
+    <string name="button_stop_recording">Stop</string>
+</resources>
