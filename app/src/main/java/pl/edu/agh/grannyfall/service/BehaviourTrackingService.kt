@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
 import android.support.v4.app.NotificationCompat
@@ -41,6 +42,7 @@ class BehaviourTrackingService : Service() {
 
     private lateinit var disposable: Disposable
     private val schedulerSubject: Subject<Long> = BehaviorSubject.create()
+    val uploadWithoutWifi = AtomicBoolean(false)
 
     override fun onCreate() {
         super.onCreate()
@@ -79,11 +81,11 @@ class BehaviourTrackingService : Service() {
             schedulerSubject.subscribeOn(Schedulers.computation())
                 .map { eventSource.lastCompoundEvent() }
                 .map { it.rawData }
-                .buffer(10, TimeUnit.MINUTES)
-//                .buffer(15, TimeUnit.SECONDS)
+//                .buffer(10, TimeUnit.MINUTES)
+                .buffer(15, TimeUnit.SECONDS)
                 .observeOn(Schedulers.io())
                 .subscribe {
-                    uploader.upload(it)
+                    uploader.upload(it, uploadWithoutWifi.get())
                 }
 
             this.notificationBuilder
@@ -132,7 +134,7 @@ class BehaviourTrackingService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        return null
+        return BehaviourServiceBinder(this)
     }
 
     companion object {
@@ -142,6 +144,12 @@ class BehaviourTrackingService : Service() {
 
         val isRunning = AtomicBoolean()
     }
+}
+
+class BehaviourServiceBinder(private val service: BehaviourTrackingService) : Binder() {
+    var uploadWithoutWifi: Boolean
+        get() = service.uploadWithoutWifi.get()
+        set(value) = service.uploadWithoutWifi.set(value)
 }
 
 inline fun <T : Any, R> whenNotNull(input: T?, callback: (T) -> R): R? {

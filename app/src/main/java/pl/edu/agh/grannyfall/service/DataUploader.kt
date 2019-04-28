@@ -7,6 +7,8 @@ import android.net.NetworkInfo
 import android.widget.Toast
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.StorageTask
+import com.google.firebase.storage.UploadTask
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.coroutines.*
@@ -25,7 +27,7 @@ class DataUploader(private val ctx: Context) {
 
     private val mutex: Mutex = Mutex()
 
-    fun upload(dataBatch: List<SensorData>) {
+    fun upload(dataBatch: List<SensorData>, uploadWithoutWifi: Boolean = false) {
         GlobalScope.launch {
             var currentWaiting: List<List<SensorData>>? = null
             mutex.withLock {
@@ -35,7 +37,7 @@ class DataUploader(private val ctx: Context) {
             }
             val network = connectivityManager.activeNetworkInfo
 
-            if (network?.type == ConnectivityManager.TYPE_WIFI) {
+            if (uploadWithoutWifi || network?.type == ConnectivityManager.TYPE_WIFI) {
                 currentWaiting?.forEach {
                     CoroutineScope(Dispatchers.IO).launch { saveData(it) }
                 }
@@ -45,20 +47,38 @@ class DataUploader(private val ctx: Context) {
         }
     }
 
-    private suspend fun saveData(data: List<SensorData>) = coroutineScope {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = data[0].measurementMillis
+    private suspend fun saveData(data: List<SensorData>, retries: Int = 3): StorageTask<UploadTask.TaskSnapshot> =
+        coroutineScope {
+            val calendar = Calendar.getInstance()
+            calendar.timeInMillis = data[0].measurementMillis
+            val objectReference = cloudStorage.child("data/${formatter.format(calendar.time)}")
 
-
-        val objectReference = cloudStorage.child("data/${formatter.format(calendar.time)}")
-        data.joinToString("\n") { it.toString() }.byteInputStream().use {
-            objectReference.putStream(it).addOnSuccessListener {
-                CoroutineScope(Dispatchers.Main).launch {
-                    Toast.makeText(ctx, "Batch processed: ${data.size}", Toast.LENGTH_SHORT).show()
+            data.joinToString("\n") { it.toString() }
+                .byteInputStream()
+                .use {
+                    objectReference.putStream(it).addOnSuccessListener {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            Toast.makeText(ctx, "Batch processed: ${data.size}", Toast.LENGTH_SHORT).show()
+                        }
+                    }.addOnFailureListener {
+                        launch {
+                            retryOrPostpone(retries, data)
+                        }
+                    }
                 }
-            }.addOnFailureListener { e ->
-                e.printStackTrace()
+        }
+
+    private suspend fun DataUploader.retryOrPostpone(
+        retries: Int,
+        data: List<SensorData>
+    ) {
+        if (retries > 0) {
+            saveData(data, retries - 1)
+        } else {
+            mutex.withLock {
+                this@DataUploader.waitList.add(data)
             }
+
         }
     }
 
