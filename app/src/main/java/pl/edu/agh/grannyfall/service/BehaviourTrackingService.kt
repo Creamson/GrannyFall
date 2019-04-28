@@ -81,8 +81,8 @@ class BehaviourTrackingService : Service() {
             schedulerSubject.subscribeOn(Schedulers.computation())
                 .map { eventSource.lastCompoundEvent() }
                 .map { it.rawData }
-//                .buffer(10, TimeUnit.MINUTES)
-                .buffer(15, TimeUnit.SECONDS)
+                .buffer(10, TimeUnit.MINUTES)
+//                .buffer(15, TimeUnit.SECONDS)
                 .observeOn(Schedulers.io())
                 .subscribe {
                     uploader.upload(it, uploadWithoutWifi.get())
