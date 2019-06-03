@@ -15,6 +15,7 @@ import pl.edu.agh.grannyfall.service.BehaviourTrackingService
 class MainActivity : AppCompatActivity() {
 
     private var serviceBinder: BehaviourServiceBinder? = null
+    private var fromService:Boolean = false
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -23,6 +24,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             serviceBinder = service as BehaviourServiceBinder
+            serviceBinder?.uploadWithoutWifi = switchWifiRequired.isChecked
         }
 
     }
@@ -30,8 +32,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        fromService = BehaviourTrackingService.isRunning.get()
 
-        if (BehaviourTrackingService.isRunning.get()) {
+        if (fromService) {
             buttonStartRecording.visibility = View.INVISIBLE
             buttonStopRecording.visibility = View.VISIBLE
         }
@@ -68,10 +71,5 @@ class MainActivity : AppCompatActivity() {
         if (serviceBinder != null) {
             unbindService(serviceConnection)
         }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle?) {
-        super.onSaveInstanceState(outState)
-        outState!!.putBoolean("started", true)
     }
 }
