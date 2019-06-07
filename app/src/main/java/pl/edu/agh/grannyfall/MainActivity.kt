@@ -15,7 +15,7 @@ import pl.edu.agh.grannyfall.service.BehaviourTrackingService
 class MainActivity : AppCompatActivity() {
 
     private var serviceBinder: BehaviourServiceBinder? = null
-    private var fromService:Boolean = false
+    private var fromService: Boolean = false
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceDisconnected(name: ComponentName?) {

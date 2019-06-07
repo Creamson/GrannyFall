@@ -1,6 +1,10 @@
 package pl.edu.agh.grannyfall.service
 
 import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.VibrationEffect.createOneShot
+import android.os.Vibrator
 import android.util.Log
 import android.widget.Toast
 import io.reactivex.Observable
@@ -25,6 +29,7 @@ class FallTracker(private val context: Context, baseUrl: String) {
     private val anomalyDetectorClient: AnomalyDetectorClient
     private val size: Single<Int>
     private val threshold: Single<Int>
+    private val vibrator: Vibrator
 
     init {
         val retrofit = Retrofit.Builder()
@@ -37,11 +42,13 @@ class FallTracker(private val context: Context, baseUrl: String) {
         anomalyDetectorClient = retrofit.create(AnomalyDetectorClient::class.java)
         size = anomalyDetectorClient.size().cache()
         threshold = anomalyDetectorClient.threshold()
+        vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
     }
 
+    private val vibrationDuration = 5000L
+
     fun start(data: Observable<SensorData>): Disposable {
-        var toast: Toast? = null
         return size.zipWith(threshold, BiFunction<Int, Int, Observable<Boolean>> { sizeValue, thresholdValue ->
             data.observeOn(Schedulers.computation())
                 .map { it.toArrayUnsafe() }
@@ -60,9 +67,11 @@ class FallTracker(private val context: Context, baseUrl: String) {
             .filter { it }
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({
-                if (toast == null || !toast!!.view.isShown) {
-                    toast = Toast.makeText(context, "Detected anomaly", Toast.LENGTH_LONG)
-                    toast!!.show()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(createOneShot(vibrationDuration, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    //deprecated in API 26
+                    vibrator.vibrate(vibrationDuration)
                 }
             }, {
                 Toast.makeText(context, "Fail within Fall Tracker.", Toast.LENGTH_LONG).show()

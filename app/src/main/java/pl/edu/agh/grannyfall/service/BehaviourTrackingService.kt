@@ -10,6 +10,7 @@ import android.os.PowerManager
 import android.support.v4.app.NotificationCompat
 import android.support.v4.content.ContextCompat
 import io.reactivex.Observable
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
@@ -24,19 +25,17 @@ class BehaviourTrackingService : Service() {
 
     private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var eventSource: EventSource
-    private lateinit var disposable: Disposable
+    private val disposable = CompositeDisposable()
     private lateinit var fallTracker: FallTracker
 
     private val schedulerSubject: Subject<Long> = BehaviorSubject.create()
-
-    val uploadWithoutWifi = AtomicBoolean(false)
 
     override fun onCreate() {
         super.onCreate()
 
         eventSource = EventSource(this)
 
-        val powerManager = this.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
 
         wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
@@ -51,9 +50,9 @@ class BehaviourTrackingService : Service() {
             eventSource.start()
             fallTracker = FallTracker(this, intent!!.getStringExtra("url"))
 
-            disposable = Observable.interval(10, TimeUnit.MILLISECONDS)
+            disposable.add(Observable.interval(10, TimeUnit.MILLISECONDS)
                 .subscribeOn(Schedulers.computation())
-                .subscribe(schedulerSubject::onNext)
+                .subscribe(schedulerSubject::onNext))
 
 
             val sensorEventSource = schedulerSubject.subscribeOn(Schedulers.computation())
@@ -61,7 +60,7 @@ class BehaviourTrackingService : Service() {
                 .map { it.rawData }
                 .filter { it.accelerometerX != null && it.gyroscopeX != null }
 
-            fallTracker.start(sensorEventSource)
+            disposable.add(fallTracker.start(sensorEventSource))
 
 
             startForeground(
@@ -96,7 +95,7 @@ class BehaviourTrackingService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        return BehaviourServiceBinder(this)
+        return BehaviourServiceBinder()
     }
 
     private fun generateBigTextStyleNotification(): Notification? {
@@ -222,11 +221,7 @@ fun createNotificationChannel(
     }
 }
 
-class BehaviourServiceBinder(private val service: BehaviourTrackingService) : Binder() {
-    var uploadWithoutWifi: Boolean
-        get() = service.uploadWithoutWifi.get()
-        set(value) = service.uploadWithoutWifi.set(value)
-}
+class BehaviourServiceBinder : Binder()
 
 inline fun <T : Any, R> whenNotNull(input: T?, callback: (T) -> R): R? {
     return input?.let(callback)
