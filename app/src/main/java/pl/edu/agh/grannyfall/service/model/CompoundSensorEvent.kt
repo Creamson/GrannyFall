@@ -37,4 +37,15 @@ data class SensorData(
     override fun toString(): String {
         return "$measurementMillis, $accelerometerX, $accelerometerY, $accelerometerZ, $gyroscopeX, $gyroscopeY, $gyroscopeZ"
     }
+
+    fun toArrayUnsafe(): Array<Float> {
+        return arrayOf(
+            accelerometerX!!,
+            accelerometerY!!,
+            accelerometerZ!!,
+            gyroscopeX!!,
+            gyroscopeY!!,
+            gyroscopeZ!!
+        )
+    }
 }

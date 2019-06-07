@@ -24,7 +24,6 @@ class MainActivity : AppCompatActivity() {
 
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             serviceBinder = service as BehaviourServiceBinder
-            serviceBinder?.uploadWithoutWifi = switchWifiRequired.isChecked
         }
 
     }
@@ -40,10 +39,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         setupButtonListeners()
-
-        switchWifiRequired.setOnCheckedChangeListener { _, isChecked ->
-            serviceBinder?.uploadWithoutWifi = isChecked
-        }
     }
 
     private fun setupButtonListeners() {
@@ -61,7 +56,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startService() {
+        val serverUrl = inputIP.text.toString()
         val startServiceIntent = Intent(this, BehaviourTrackingService::class.java)
+        startServiceIntent.putExtra("url", serverUrl)
         bindService(startServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
         startService(startServiceIntent)
     }

@@ -3,14 +3,12 @@ package pl.edu.agh.grannyfall.service
 import android.app.*
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.support.v4.app.NotificationCompat
 import android.support.v4.content.ContextCompat
-import android.util.Log
 import io.reactivex.Observable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -26,17 +24,17 @@ class BehaviourTrackingService : Service() {
 
     private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var eventSource: EventSource
-    private lateinit var uploader: DataUploader
-
     private lateinit var disposable: Disposable
+    private lateinit var fallTracker: FallTracker
+
     private val schedulerSubject: Subject<Long> = BehaviorSubject.create()
+
     val uploadWithoutWifi = AtomicBoolean(false)
 
     override fun onCreate() {
         super.onCreate()
 
         eventSource = EventSource(this)
-        uploader = DataUploader(this)
 
         val powerManager = this.getSystemService(Context.POWER_SERVICE) as PowerManager
 
@@ -51,21 +49,20 @@ class BehaviourTrackingService : Service() {
         whenNotNull(intent) {
             isRunning.set(true)
             eventSource.start()
+            fallTracker = FallTracker(this, intent!!.getStringExtra("url"))
 
             disposable = Observable.interval(10, TimeUnit.MILLISECONDS)
                 .subscribeOn(Schedulers.computation())
                 .subscribe(schedulerSubject::onNext)
 
-            schedulerSubject.subscribeOn(Schedulers.computation())
+
+            val sensorEventSource = schedulerSubject.subscribeOn(Schedulers.computation())
                 .map { eventSource.lastCompoundEvent() }
                 .map { it.rawData }
-                .buffer(10, TimeUnit.MINUTES)
+                .filter { it.accelerometerX != null && it.gyroscopeX != null }
 
-//                .buffer(15, TimeUnit.SECONDS)
-                .observeOn(Schedulers.io())
-                .subscribe {
-                    uploader.upload(it, uploadWithoutWifi.get())
-                }
+            fallTracker.start(sensorEventSource)
+
 
             startForeground(
                 ROUTE_UPDATES_FOREGROUND_ID,
