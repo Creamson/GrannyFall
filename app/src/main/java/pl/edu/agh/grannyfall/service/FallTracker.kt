@@ -1,6 +1,7 @@
 package pl.edu.agh.grannyfall.service
 
 import android.content.Context
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.VibrationEffect.createOneShot
@@ -14,6 +15,7 @@ import io.reactivex.disposables.Disposable
 import io.reactivex.functions.BiFunction
 import io.reactivex.schedulers.Schedulers
 import okhttp3.OkHttpClient
+import pl.edu.agh.grannyfall.R
 import pl.edu.agh.grannyfall.service.model.SensorData
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
@@ -30,6 +32,7 @@ class FallTracker(private val context: Context, baseUrl: String) {
     private val size: Single<Int>
     private val threshold: Single<Int>
     private val vibrator: Vibrator
+    private val mediaPlayer: MediaPlayer
 
     init {
         val retrofit = Retrofit.Builder()
@@ -43,7 +46,7 @@ class FallTracker(private val context: Context, baseUrl: String) {
         size = anomalyDetectorClient.size().cache()
         threshold = anomalyDetectorClient.threshold()
         vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-
+        mediaPlayer = MediaPlayer.create(context, R.raw.falling)
     }
 
     private val vibrationDuration = 5000L
@@ -73,6 +76,7 @@ class FallTracker(private val context: Context, baseUrl: String) {
                     //deprecated in API 26
                     vibrator.vibrate(vibrationDuration)
                 }
+                mediaPlayer.start()
             }, {
                 Toast.makeText(context, "Fail within Fall Tracker.", Toast.LENGTH_LONG).show()
                 it.printStackTrace()
